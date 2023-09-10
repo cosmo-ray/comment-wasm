@@ -124,7 +124,7 @@ int wasm_comment(char in[static 1], int max)
 			goto out_section;
 		case EXPORT:
 			for (int i = 0; i < stuff_len; ++i) {
-				printf("  export(%d):", i);
+				printf("  export(%d): ", i);
 				int len = STORE_NUM(1);
 				if (max < len)
 					return -1;
