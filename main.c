@@ -2,8 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define IN_BUF_LEN 1024
-#define OUT_BUF_LEN IN_BUF_LEN * 2
+#define IN_BUF_LEN (1024 * 64)
 
 #define BOUM(...) do {				\
 		fprintf(stderr, __VA_ARGS__);	\
@@ -63,7 +62,7 @@ int count_func;
 		BOUM("unknow type %x\n", rt);	\
 	} } while (0)
 
-int wasm_comment(char in[static 1], char out[static 1], int max)
+int wasm_comment(char in[static 1], int max)
 {
 	int result;
 	int section_len = -1;
@@ -93,7 +92,7 @@ int wasm_comment(char in[static 1], char out[static 1], int max)
 		break;
 		case FUNCTIONS:
 			for (int i = 0; i < stuff_len; ++i) {
-				printf("  function %d signature index\n", STORE_NUM(1));
+				printf("  function %d signature index: %d\n", i, STORE_NUM(1));
 			}
 			if (section_len) {
 				BOUM("section too big of %d\n", section_len);
@@ -118,6 +117,40 @@ int wasm_comment(char in[static 1], char out[static 1], int max)
 				printf("  memory(flag %x)", STORE_NUM(1));
 				printf("[%d]", STORE_NUM(1));
 				printf("(max :%d)\n", STORE_NUM(1));
+			}
+			if (section_len) {
+				BOUM("section too big of %d\n", section_len);
+			}
+			goto out_section;
+		case EXPORT:
+			for (int i = 0; i < stuff_len; ++i) {
+				printf("  export(%d):", i);
+				int len = STORE_NUM(1);
+				if (max < len)
+					return -1;
+				section_len -= len;
+				max -= len;
+				char *str = malloc(len + 1);
+				for (int i = 0; i < len; ++i)
+					str[i] = *in++;
+				str[len] = 0;
+				printf("'%s' ", str);
+				free(str);
+				int kind = STORE_NUM(1);
+				switch (kind) {
+				case 2:
+					printf("of mem idx: %d", STORE_NUM(1));
+					break;
+				case 0:
+					printf("of func idx: %d", STORE_NUM(1));
+					break;
+				case 1:
+					printf("of table idx: %d", STORE_NUM(1));
+					break;
+				default:
+					BOUM("unknow kind %x\n", kind);
+				}
+				printf("\n");
 			}
 			if (section_len) {
 				BOUM("section too big of %d\n", section_len);
@@ -234,13 +267,11 @@ int wasm_comment(char in[static 1], char out[static 1], int max)
 int main(void)
 {
 	char in[IN_BUF_LEN];
-	char out[OUT_BUF_LEN];
 	ssize_t rret;
 
 	while ((rret = read(0, in, IN_BUF_LEN - 1))) {
 		in[rret] = 0;
-		wasm_comment(in, out, OUT_BUF_LEN - rret);
-		printf("%s", out);
+		wasm_comment(in, rret);
 	}
 	fflush(stdout);
 
