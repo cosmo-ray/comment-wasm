@@ -122,9 +122,120 @@ int wasm_comment(char in[static 1], int max)
 				BOUM("section too big of %d\n", section_len);
 			}
 			goto out_section;
+		case CODE:
+		{
+			int nb_parsed = 0;
+		parse_fn_body: // yes I use a goto, just so I have less indentation :p
+			int f_sz = STORE_NUM(1);
+			int loc_dec_cnt = STORE_NUM(1);
+			printf("func body(%d): (size %d), (loc decl count: %d) {\n",
+			       nb_parsed, f_sz, loc_dec_cnt);
+			if (loc_dec_cnt) {
+				printf("(local type cnt: %d ", STORE_NUM(1));
+				PRINT_TYPE();
+				printf(")\n");
+			}
+			while (1)
+			{
+				int instruction = ADVANCE();
+				switch (instruction) {
+				case 0x10:
+				{
+					int fidx = STORE_NUM(1);
+					printf("\tcall func: %d\n", fidx);
+				}
+				continue;
+				case 0x24:
+				{
+					int fidx = STORE_NUM(1);
+					printf("\tglobal.set: %d\n", fidx);
+				}
+				continue;
+				case 0x23:
+				{
+					int fidx = STORE_NUM(1);
+					printf("\tglobal.get: %d\n", fidx);
+				}
+				continue;
+				case 0x20:
+				{
+					int fidx = STORE_NUM(1);
+					printf("\tlocal.get: %d\n", fidx);
+				}
+				continue;
+				case 0x21:
+				{
+					int fidx = STORE_NUM(1);
+					printf("\tlocal.set: %d\n", fidx);
+				}
+				continue;
+				case 0x22:
+				{
+					int fidx = STORE_NUM(1);
+					printf("\tlocal.tee: %d\n", fidx);
+				}
+				continue;
+				case 0x28:
+				{
+					int alignement = STORE_NUM(1);
+					int offset = STORE_NUM(1);
+					printf("\ti32.load: align: %d offset %d\n",
+					       alignement, offset);
+				}
+				continue;
+				case 0x36:
+				{
+					int alignement = STORE_NUM(1);
+					int offset = STORE_NUM(1);
+					printf("\ti32.store: align: %d offset %d\n",
+					       alignement, offset);
+				}
+				continue;
+				case 0x41:
+				{
+					int fidx = STORE_NUM(1);
+					printf("\ti32.const: %d\n", fidx);
+				}
+				continue;
+				case 0x6a:
+				{
+					printf("\ti32.add\n");
+				}
+				continue;
+				case 0x6b:
+				{
+					printf("\ti32.sub\n");
+				}
+				continue;
+				case 0x71:
+				{
+					printf("\ti32.and\n");
+				}
+				continue;
+				case 0xf:
+				{
+					printf("\treturn\n");
+				}
+				continue;
+				case 0x0b:
+					printf("}\n");
+					break;
+				default:
+					BOUM("unknow instruction %x\n", instruction);
+				}
+				break;
+			}
+			if (++nb_parsed < stuff_len)
+				goto parse_fn_body;
+		}
+		if (section_len) {
+			BOUM("section too big of %d\n", section_len);
+		}
+		goto out_section;
 		case EXPORT:
 			for (int i = 0; i < stuff_len; ++i) {
 				printf("  export(%d): ", i);
+				/* read str */
 				int len = STORE_NUM(1);
 				if (max < len)
 					return -1;
@@ -136,6 +247,7 @@ int wasm_comment(char in[static 1], int max)
 				str[len] = 0;
 				printf("'%s' ", str);
 				free(str);
+				/* end read str */
 				int kind = STORE_NUM(1);
 				switch (kind) {
 				case 2:
