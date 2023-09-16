@@ -62,7 +62,7 @@ int count_func;
 		BOUM("unknow type %x\n", rt);	\
 	} } while (0)
 
-int wasm_comment(char in[static 1], int max)
+int wasm_comment(unsigned char in[static 1], int max)
 {
 	int result;
 	int section_len = -1;
@@ -72,7 +72,7 @@ int wasm_comment(char in[static 1], int max)
 		switch (state) {
 		case BEGIN:
 		{
-			char *beg = in;
+			unsigned char *beg = in;
 			int *itmp;
 			if (max < 9) {
 				BOUM("file too small\n");
@@ -128,6 +128,7 @@ int wasm_comment(char in[static 1], int max)
 		parse_fn_body: // yes I use a goto, just so I have less indentation :p
 			int f_sz = STORE_NUM(1);
 			int loc_dec_cnt = STORE_NUM(1);
+			int cnt_ident = 1;
 			printf("func body(%d): (size %d), (loc decl count: %d) {\n",
 			       nb_parsed, f_sz, loc_dec_cnt);
 			if (loc_dec_cnt) {
@@ -139,12 +140,46 @@ int wasm_comment(char in[static 1], int max)
 			{
 				int instruction = ADVANCE();
 				switch (instruction) {
+				case 2:
+				case 3:
+				{
+					printf("\t%s: -> ", instruction == 2 ? "block" : "loop");
+					++cnt_ident;
+					int type = ADVANCE();
+					if (type == 0x40) {
+						printf("() {\n");
+					} else {
+						BOUM("%x type not handle\n", type);
+					}
+				}
+				continue;
+				case 0x0c:
+				{
+					printf("\tbr -> %d\n", STORE_NUM(1));
+				}
+				continue;
+				case 0x0d:
+				{
+					printf("\tbr_if -> %d\n", STORE_NUM(1));
+				}
+				continue;
 				case 0x10:
 				{
 					int fidx = STORE_NUM(1);
 					printf("\tcall func: %d\n", fidx);
 				}
 				continue;
+				case 0x11:
+				{
+					int sidx = STORE_NUM(1);
+					int tidx = STORE_NUM(1);
+					printf("\tindirect call func: sig %d -tbl  %d\n",
+					       sidx, tidx);
+				}
+				continue;
+				case 0x1a:
+					printf("drop\n");
+					continue;
 				case 0x24:
 				{
 					int fidx = STORE_NUM(1);
@@ -191,10 +226,40 @@ int wasm_comment(char in[static 1], int max)
 					       alignement, offset);
 				}
 				continue;
+				case 0x37:
+				{
+					int alignement = STORE_NUM(1);
+					int offset = STORE_NUM(1);
+					printf("\ti64.store: align: %d offset %d\n",
+					       alignement, offset);
+				}
+				continue;
 				case 0x41:
 				{
 					int fidx = STORE_NUM(1);
 					printf("\ti32.const: %d\n", fidx);
+				}
+				continue;
+				case 0x42:
+				{
+					int fidx = STORE_NUM(1);
+					printf("\ti64.const: %d\n", fidx);
+				}
+				continue;
+				case 0x45:
+				{
+					printf("\ti32.eqz\n");
+				}
+				continue;
+				case 0x46:
+				{
+					printf("\ti32.eq\n");
+				}
+				continue;
+
+				case 0x48:
+				{
+					printf("\ti32.lt_s\n");
 				}
 				continue;
 				case 0x6a:
@@ -212,14 +277,27 @@ int wasm_comment(char in[static 1], int max)
 					printf("\ti32.and\n");
 				}
 				continue;
+				case 0x72:
+				{
+					printf("\ti32.or\n");
+				}
+				continue;
+				case 0xac:
+				{
+					printf("\ti64.extend_i32_s\n");
+				}
+				continue;
 				case 0xf:
 				{
 					printf("\treturn\n");
 				}
 				continue;
 				case 0x0b:
-					printf("}\n");
-					break;
+					--cnt_ident;
+					printf("%s}\n", cnt_ident ? "\t" : "");
+					if (!cnt_ident)
+						break;
+					continue;
 				default:
 					BOUM("unknow instruction %x\n", instruction);
 				}
@@ -378,7 +456,7 @@ int wasm_comment(char in[static 1], int max)
 
 int main(void)
 {
-	char in[IN_BUF_LEN];
+	unsigned char in[IN_BUF_LEN];
 	ssize_t rret;
 
 	while ((rret = read(0, in, IN_BUF_LEN - 1))) {
