@@ -62,11 +62,20 @@ int count_func;
 		BOUM("unknow type %x\n", rt);	\
 	} } while (0)
 
+
+#define output(...)							\
+	({								\
+		printf("%x:", in - start);				\
+		printf(__VA_ARGS__);					\
+	})
+
 int wasm_comment(unsigned char in[static 1], int max)
 {
+	unsigned char *start = in;
 	int result;
 	int section_len = -1;
 	int stuff_len = -1;
+	int count_bytes = 0;
 
 	while (1) {
 		switch (state) {
@@ -79,12 +88,12 @@ int wasm_comment(unsigned char in[static 1], int max)
 			}
 			if (*in++ == 0 && *in++ == 0x61
 			    && *in++ == 0x73 && *in++ == 0x6d) {
-				printf("0061 736d ; WASM_BINARY_MAGIC\n");
+				output("0061 736d ; WASM_BINARY_MAGIC\n");
 			} else {
 				BOUM("invalide magic number at %zu\n", in  -beg);
 			}
 			itmp = (void *)in;
-			printf("\tVERSION: %d\n", *itmp);
+			output("\tVERSION: %d\n", *itmp);
 			in += 4;
 			max -= 8;
 			state = WHICH_SECTION;
@@ -92,10 +101,10 @@ int wasm_comment(unsigned char in[static 1], int max)
 		break;
 		case FUNCTIONS:
 			for (int i = 0; i < stuff_len; ++i) {
-				printf("  function %d signature index: %d\n", i, STORE_NUM(1));
+				output("  function %d signature index: %d\n", i, STORE_NUM(1));
 			}
 			if (section_len) {
-				BOUM("section too big of %d\n", section_len);
+				BOUM("functions section too big of %d\n", section_len);
 			}
 			goto out_section;
 		case TABLE:
@@ -104,22 +113,22 @@ int wasm_comment(unsigned char in[static 1], int max)
 				if (t != 0x70) {
 					BOUM("unknow table type %x\n", t);
 				}
-				printf("  funref(flag %x)", STORE_NUM(1));
-				printf("[%d]", STORE_NUM(1));
-				printf("(max :%d)\n", STORE_NUM(1));
+				output("  funref(flag %x)", STORE_NUM(1));
+				output("[%x]", STORE_NUM(1));
+				output("(max :%x)\n", STORE_NUM(1));
 			}
 			if (section_len) {
-				BOUM("section too big of %d\n", section_len);
+				BOUM("table section too big of %d\n", section_len);
 			}
 			goto out_section;
 		case MEMORY:
 			for (int i = 0; i < stuff_len; ++i) {
-				printf("  memory(flag %x)", STORE_NUM(1));
-				printf("[%d]", STORE_NUM(1));
-				printf("(max :%d)\n", STORE_NUM(1));
+				output("  memory(flag %x)", STORE_NUM(1));
+				output("[%x]", STORE_NUM(1));
+				output("(max :%x)\n", STORE_NUM(1));
 			}
 			if (section_len) {
-				BOUM("section too big of %d\n", section_len);
+				BOUM("mem section too big of %d\n", section_len);
 			}
 			goto out_section;
 		case CODE:
@@ -129,12 +138,12 @@ int wasm_comment(unsigned char in[static 1], int max)
 			int f_sz = STORE_NUM(1);
 			int loc_dec_cnt = STORE_NUM(1);
 			int cnt_ident = 1;
-			printf("func body(%d): (size %d), (loc decl count: %d) {\n",
+			output("func body(%d): (size %d), (loc decl count: %d) {\n",
 			       nb_parsed, f_sz, loc_dec_cnt);
 			if (loc_dec_cnt) {
-				printf("(local type cnt: %d ", STORE_NUM(1));
+				output("(local type cnt: %d ", STORE_NUM(1));
 				PRINT_TYPE();
-				printf(")\n");
+				output(")\n");
 			}
 			while (1)
 			{
@@ -143,11 +152,11 @@ int wasm_comment(unsigned char in[static 1], int max)
 				case 2:
 				case 3:
 				{
-					printf("\t%s: -> ", instruction == 2 ? "block" : "loop");
+					output("\t%s: -> ", instruction == 2 ? "block" : "loop");
 					++cnt_ident;
 					int type = ADVANCE();
 					if (type == 0x40) {
-						printf("() {\n");
+						output("() {\n");
 					} else {
 						BOUM("%x type not handle\n", type);
 					}
@@ -155,66 +164,66 @@ int wasm_comment(unsigned char in[static 1], int max)
 				continue;
 				case 0x0c:
 				{
-					printf("\tbr -> %d\n", STORE_NUM(1));
+					output("\tbr -> %d\n", STORE_NUM(1));
 				}
 				continue;
 				case 0x0d:
 				{
-					printf("\tbr_if -> %d\n", STORE_NUM(1));
+					output("\tbr_if -> %d\n", STORE_NUM(1));
 				}
 				continue;
 				case 0x10:
 				{
 					int fidx = STORE_NUM(1);
-					printf("\tcall func: %d\n", fidx);
+					output("\tcall func: %d\n", fidx);
 				}
 				continue;
 				case 0x11:
 				{
 					int sidx = STORE_NUM(1);
 					int tidx = STORE_NUM(1);
-					printf("\tindirect call func: sig %d -tbl  %d\n",
+					output("\tindirect call func: sig %d -tbl  %d\n",
 					       sidx, tidx);
 				}
 				continue;
 				case 0x1a:
-					printf("drop\n");
+					output("drop\n");
 					continue;
 				case 0x24:
 				{
 					int fidx = STORE_NUM(1);
-					printf("\tglobal.set: %d\n", fidx);
+					output("\tglobal.set: %d\n", fidx);
 				}
 				continue;
 				case 0x23:
 				{
 					int fidx = STORE_NUM(1);
-					printf("\tglobal.get: %d\n", fidx);
+					output("\tglobal.get: %d\n", fidx);
 				}
 				continue;
 				case 0x20:
 				{
 					int fidx = STORE_NUM(1);
-					printf("\tlocal.get: %d\n", fidx);
+					output("\tlocal.get: %d\n", fidx);
 				}
 				continue;
 				case 0x21:
 				{
 					int fidx = STORE_NUM(1);
-					printf("\tlocal.set: %d\n", fidx);
+					output("\tlocal.set: %d\n", fidx);
 				}
 				continue;
 				case 0x22:
 				{
 					int fidx = STORE_NUM(1);
-					printf("\tlocal.tee: %d\n", fidx);
+					output("\tlocal.tee: %d\n", fidx);
 				}
 				continue;
 				case 0x28:
 				{
 					int alignement = STORE_NUM(1);
 					int offset = STORE_NUM(1);
-					printf("\ti32.load: align: %d offset %d\n",
+					output("\ti32.load: align: %d offset %d\n",
 					       alignement, offset);
 				}
 				continue;
@@ -222,7 +231,7 @@ int wasm_comment(unsigned char in[static 1], int max)
 				{
 					int alignement = STORE_NUM(1);
 					int offset = STORE_NUM(1);
-					printf("\ti32.store: align: %d offset %d\n",
+					output("\ti32.store: align: %d offset %d\n",
 					       alignement, offset);
 				}
 				continue;
@@ -230,71 +239,71 @@ int wasm_comment(unsigned char in[static 1], int max)
 				{
 					int alignement = STORE_NUM(1);
 					int offset = STORE_NUM(1);
-					printf("\ti64.store: align: %d offset %d\n",
+					output("\ti64.store: align: %d offset %d\n",
 					       alignement, offset);
 				}
 				continue;
 				case 0x41:
 				{
 					int fidx = STORE_NUM(1);
-					printf("\ti32.const: %d\n", fidx);
+					output("\ti32.const: %d\n", fidx);
 				}
 				continue;
 				case 0x42:
 				{
 					int fidx = STORE_NUM(1);
-					printf("\ti64.const: %d\n", fidx);
+					output("\ti64.const: %d\n", fidx);
 				}
 				continue;
 				case 0x45:
 				{
-					printf("\ti32.eqz\n");
+					output("\ti32.eqz\n");
 				}
 				continue;
 				case 0x46:
 				{
-					printf("\ti32.eq\n");
+					output("\ti32.eq\n");
 				}
 				continue;
 
 				case 0x48:
 				{
-					printf("\ti32.lt_s\n");
+					output("\ti32.lt_s\n");
 				}
 				continue;
 				case 0x6a:
 				{
-					printf("\ti32.add\n");
+					output("\ti32.add\n");
 				}
 				continue;
 				case 0x6b:
 				{
-					printf("\ti32.sub\n");
+					output("\ti32.sub\n");
 				}
 				continue;
 				case 0x71:
 				{
-					printf("\ti32.and\n");
+					output("\ti32.and\n");
 				}
 				continue;
 				case 0x72:
 				{
-					printf("\ti32.or\n");
+					output("\ti32.or\n");
 				}
 				continue;
 				case 0xac:
 				{
-					printf("\ti64.extend_i32_s\n");
+					output("\ti64.extend_i32_s\n");
 				}
 				continue;
 				case 0xf:
 				{
-					printf("\treturn\n");
+					output("\treturn\n");
 				}
 				continue;
 				case 0x0b:
 					--cnt_ident;
-					printf("%s}\n", cnt_ident ? "\t" : "");
+					output("%s}\n", cnt_ident ? "\t" : "");
 					if (!cnt_ident)
 						break;
 					continue;
@@ -312,7 +321,7 @@ int wasm_comment(unsigned char in[static 1], int max)
 		goto out_section;
 		case EXPORT:
 			for (int i = 0; i < stuff_len; ++i) {
-				printf("  export(%d): ", i);
+				output("  export(%d): ", i);
 				/* read str */
 				int len = STORE_NUM(1);
 				if (max < len)
@@ -323,24 +332,24 @@ int wasm_comment(unsigned char in[static 1], int max)
 				for (int i = 0; i < len; ++i)
 					str[i] = *in++;
 				str[len] = 0;
-				printf("'%s' ", str);
+				output("'%s' ", str);
 				free(str);
 				/* end read str */
 				int kind = STORE_NUM(1);
 				switch (kind) {
 				case 2:
-					printf("of mem idx: %d", STORE_NUM(1));
+					output("of mem idx: %d", STORE_NUM(1));
 					break;
 				case 0:
-					printf("of func idx: %d", STORE_NUM(1));
+					output("of func idx: %d", STORE_NUM(1));
 					break;
 				case 1:
-					printf("of table idx: %d", STORE_NUM(1));
+					output("of table idx: %d", STORE_NUM(1));
 					break;
 				default:
 					BOUM("unknow kind %x\n", kind);
 				}
-				printf("\n");
+				output("\n");
 			}
 			if (section_len) {
 				BOUM("section too big of %d\n", section_len);
@@ -348,19 +357,19 @@ int wasm_comment(unsigned char in[static 1], int max)
 			goto out_section;
 		case GLOBAL:
 			for (int i = 0; i < stuff_len; ++i) {
-				printf("  global(%d):", i);
+				output("  global(%d):", i);
 				PRINT_TYPE();
-				printf(" - (mut: %d)\n", ADVANCE());
+				output(" - (mut: %d)\n", ADVANCE());
 				int const_t = ADVANCE();
 				if (const_t == 0x41) {
-					printf("\ti32.const: %d", STORE_NUM(1));
+					output("\ti32.const: %d", STORE_NUM(1));
 				} else {
 					BOUM("const %x not handle\n", const_t);
 				}
 				if (ADVANCE() != 0x0b) {
 					BOUM("expect end tok 0x0b\n");
 				}
-				printf("\n");
+				output("\n");
 			}
 			if (section_len) {
 				BOUM("section too big of %d\n", section_len);
@@ -370,19 +379,19 @@ int wasm_comment(unsigned char in[static 1], int max)
 		{
 			int t = ADVANCE();
 			if (t == 0x60) {
-				printf("func(%d)\n", count_func++);
+				output("func(%d)\n", count_func++);
 				int nb = ADVANCE();
-				printf("\tnb params (%d): (", nb);
+				output("\tnb params (%d): (", nb);
 				for (int i = 0; i < nb; ++i) {
 					if (i)
-						printf(", ");
+						output(", ");
 					PRINT_TYPE();
 				}
 				nb = ADVANCE();
-				printf(")\n\tnb result: %d (", nb);
+				output(")\n\tnb result: %d (", nb);
 				for (int i = 0; i < nb; ++i) {
 					if (i)
-						printf(", ");
+						output(", ");
 					PRINT_TYPE();
 				}
 				puts(")");
@@ -396,37 +405,37 @@ int wasm_comment(unsigned char in[static 1], int max)
 			const char *what = "???";
 			switch (*in++) {
 			case 01:
-				printf("SECTION TYPE ");
+				output("SECTION TYPE ");
 				state = TYPE;
 				what = " nb types";
 				break;
 			case 03:
-				printf("SECTION FUNCTIONS ");
+				output("SECTION FUNCTIONS ");
 				state = FUNCTIONS;
 				what = " nb functions";
 				break;
 			case 04:
-				printf("SECTION TABLE ");
+				output("SECTION TABLE ");
 				state = TABLE;
 				what = " nb tables";
 				break;
 			case 05:
-				printf("SECTION MEMORY ");
+				output("SECTION MEMORY ");
 				state = MEMORY;
 				what = " nb memories";
 				break;
 			case 06:
-				printf("SECTION GLOBAL ");
+				output("SECTION GLOBAL ");
 				state = GLOBAL;
 				what = " nb globals";
 				break;
 			case 07:
-				printf("SECTION EXPORT ");
+				output("SECTION EXPORT ");
 				state = EXPORT;
 				what = " nb exports";
 				break;
 			case 10:
-				printf("SECTION CODE ");
+				output("SECTION CODE ");
 				state = CODE;
 				what = " nb functtions";
 				break;
