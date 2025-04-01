@@ -29,7 +29,7 @@ int count_func;
 			int shift = 0;					\
 			while (1) {					\
 				int byte = ADVANCE_(check);		\
-				r |= (byte & 0x7f) << shift;	\
+				r |= (byte & 0x7f) << shift;		\
 				if (!(byte & 0x80))			\
 					break;				\
 				shift += 7;				\
@@ -57,6 +57,12 @@ int count_func;
 		break;				\
 	case 0x7e:				\
 		printf("i64");			\
+		break;				\
+	case 0x7d:				\
+		printf("f32");			\
+		break;				\
+	case 0x7c:				\
+		printf("f64");			\
 		break;				\
 	default:				\
 		BOUM("unknow type %x\n", rt);	\
@@ -143,7 +149,7 @@ int wasm_comment(unsigned char in[static 1], int max)
 			if (loc_dec_cnt) {
 				output("(local type cnt: %d ", STORE_NUM(1));
 				PRINT_TYPE();
-				output(")\n");
+				printf(")\n");
 			}
 			while (1)
 			{
@@ -337,6 +343,9 @@ int wasm_comment(unsigned char in[static 1], int max)
 				/* end read str */
 				int kind = STORE_NUM(1);
 				switch (kind) {
+				case 3:
+					output("of unknow idx: %d", STORE_NUM(1));
+					break;
 				case 2:
 					output("of mem idx: %d", STORE_NUM(1));
 					break;
