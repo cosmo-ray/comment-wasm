@@ -277,6 +277,21 @@ int wasm_comment(unsigned char in[static 1], int max)
 					output("\ti32.lt_s\n");
 				}
 				continue;
+				case 0x4a:
+				{
+					output("\ti32.gt_s\n");
+				}
+				continue;
+				case 0x4e:
+				{
+					output("\ti32.ge_s\n");
+				}
+				continue;
+				case 0x6d:
+				{
+					output("\ti32.div_s\n");
+				}
+				continue;
 				case 0x6a:
 				{
 					output("\ti32.add\n");
@@ -285,6 +300,11 @@ int wasm_comment(unsigned char in[static 1], int max)
 				case 0x6b:
 				{
 					output("\ti32.sub\n");
+				}
+				continue;
+				case 0x6c:
+				{
+					output("\ti32.mul\n");
 				}
 				continue;
 				case 0x71:
