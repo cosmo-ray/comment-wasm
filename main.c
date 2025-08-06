@@ -507,10 +507,9 @@ int main(void)
 	unsigned char in[IN_BUF_LEN];
 	ssize_t rret;
 
-	while ((rret = read(0, in, IN_BUF_LEN - 1))) {
-		in[rret] = 0;
-		wasm_comment(in, rret);
-	}
+	rret = read(0, in, IN_BUF_LEN - 1);
+	in[rret] = 0;
+	wasm_comment(in, rret);
 	fflush(stdout);
 
 }
