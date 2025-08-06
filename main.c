@@ -178,6 +178,16 @@ int wasm_comment(unsigned char in[static 1], int max)
 					output("\tbr_if -> %d\n", STORE_NUM(1));
 				}
 				continue;
+				case 0x0e:
+				{
+					int nb = STORE_NUM(1);
+					output("\tbr_table (%d) ->", nb);
+					for (int i = 0; i < nb; ++i) {
+						printf(" %d", STORE_NUM(1));
+					}
+					putchar('\n');
+				}
+				continue;
 				case 0x10:
 				{
 					int fidx = STORE_NUM(1);
