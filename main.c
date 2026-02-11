@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -505,14 +506,23 @@ int wasm_comment(unsigned char in[static 1], int max)
 	}
 }
 
-int main(void)
+int main(int ac, char **av)
 {
 	unsigned char in[IN_BUF_LEN];
 	ssize_t rret;
+	int fd = 0;
 
-	rret = read(0, in, IN_BUF_LEN - 1);
+	if (ac > 1) {
+		fd = open(av[1], O_RDONLY);
+		if (fd < 0) {
+			fprintf(stderr, "can't open %s\n", av[1]);
+			return 1;
+		}
+	}
+	rret = read(fd, in, IN_BUF_LEN - 1);
 	in[rret] = 0;
 	wasm_comment(in, rret);
 	fflush(stdout);
-
+	if (fd)
+		close(fd);
 }
