@@ -73,7 +73,7 @@ int cnt_ident = 0;
 
 #define output(...)							\
 	({								\
-		printf("%x:", in - start);				\
+		printf("%lx:", (long int)(in - start));			\
 		for (int i = 0; i < cnt_ident; ++i) printf("   ");	\
 		printf(__VA_ARGS__);					\
 	})
@@ -84,7 +84,6 @@ int wasm_comment(unsigned char in[static 1], int max)
 	int result;
 	int section_len = -1;
 	int stuff_len = -1;
-	int count_bytes = 0;
 
 	while (1) {
 		switch (state) {
