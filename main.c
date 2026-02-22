@@ -14,6 +14,7 @@ enum {
 	BEGIN = 0,
 	WHICH_SECTION,
 	TYPE,
+	IMPORT,
 	FUNCTIONS,
 	TABLE,
 	GLOBAL,
@@ -358,6 +359,35 @@ int wasm_comment(unsigned char in[static 1], int max)
 			BOUM("section too big of %d\n", section_len);
 		}
 		goto out_section;
+		case IMPORT:
+			for (int i = 0; i < stuff_len; ++i) {
+				output("  import(%d): ", i);
+				/* read str */
+				int len = STORE_NUM(1);
+				if (max < len)
+					return -1;
+				section_len -= len;
+				max -= len;
+				for (int i = 0; i < len; ++i)
+					putchar(*in++);
+				putchar('.');
+				len = STORE_NUM(1);
+				if (max < len)
+					return -1;
+				section_len -= len;
+				max -= len;
+				for (int i = 0; i < len; ++i)
+					putchar(*in++);
+				int import_type = STORE_NUM(1);
+				if (import_type) {
+					printf(" IMPORT TYPE %d NOT HANDLE\n", import_type);
+					return -1;
+				}
+				int idx = STORE_NUM(1);
+				printf("{FUNC - idx %d}", idx);
+				printf("\n");
+			}
+			goto out_section;
 		case EXPORT:
 			for (int i = 0; i < stuff_len; ++i) {
 				output("  export(%d): ", i);
@@ -450,6 +480,11 @@ int wasm_comment(unsigned char in[static 1], int max)
 				output("SECTION TYPE ");
 				state = TYPE;
 				what = " nb types";
+				break;
+			case 02:
+				output("SECTION IMPORT ");
+				state = IMPORT;
+				what = " nb imports";
 				break;
 			case 03:
 				output("SECTION FUNCTIONS ");
