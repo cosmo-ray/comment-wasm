@@ -6,6 +6,7 @@
 #define IN_BUF_LEN (1024 * 64)
 
 #define BOUM(...) do {				\
+		fflush(stdout);			\
 		fprintf(stderr, __VA_ARGS__);	\
 		return -1;			\
 	} while (0);
@@ -47,7 +48,9 @@ int cnt_ident = 0;
 
 #define ADVANCE_(check) ({						\
 			if (max-- <= 0) return -1;			\
-			if (check && section_len-- == 0) goto out_section; \
+			if (check && section_len-- == 0) {		\
+				BOUM("section len reach at %lx\n", (long int)(in - start)); \
+			}						\
 			*in++;})
 
 #define ADVANCE() ADVANCE_(1)
@@ -449,7 +452,9 @@ int wasm_comment(unsigned char in[static 1], int max)
 			goto out_section;
 		case TYPE:
 		{
-			int t = ADVANCE();
+			int t;
+		new_Type:
+			t = ADVANCE();
 			if (t == 0x60) {
 				output("func(%d)\n", count_func++);
 				int nb = ADVANCE();
@@ -467,10 +472,12 @@ int wasm_comment(unsigned char in[static 1], int max)
 					PRINT_TYPE();
 				}
 				puts(")");
+				if (in[0] == 0x60)
+					goto new_Type;
 			} else
 				BOUM("unknow %x (section bytes left: %d)\n",
 				     t, section_len);
-			break;
+			goto out_section;
 		}
 		case WHICH_SECTION:
 		{
