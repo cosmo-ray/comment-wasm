@@ -481,6 +481,8 @@ int wasm_comment(unsigned char in[static 1], int max)
 		}
 		case WHICH_SECTION:
 		{
+			if (!max)
+				return 0;
 			const char *what = "???";
 			switch (*in++) {
 			case 01:
