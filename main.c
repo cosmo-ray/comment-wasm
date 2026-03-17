@@ -153,7 +153,7 @@ int wasm_comment(unsigned char in[static 1], int max)
 			output("func body(%d): (size %d), (loc decl count: %d) {\n",
 			       nb_parsed, f_sz, loc_dec_cnt);
 			cnt_ident = 1;
-			if (loc_dec_cnt) {
+			while (loc_dec_cnt--) {
 				output("(local type cnt: %d ", STORE_NUM(1));
 				PRINT_TYPE();
 				printf(")\n");
